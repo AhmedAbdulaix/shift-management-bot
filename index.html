@@ -1,93 +1,103 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, DollarSign, Users, FileText, Plus, Eye, BarChart3, Settings } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shift Management Bot</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { Calendar, Clock, DollarSign, Users, FileText, Plus, Eye, BarChart3, Settings } = lucide;
 
-const ShiftManagementBot = () => {
-  const [currentView, setCurrentView] = useState('submit'); // 'submit', 'admin', or 'settings'
-  const [shifts, setShifts] = useState([]);
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [formData, setFormData] = useState({
-    chatterName: '',
-    shiftDate: '',
-    hoursWorked: '',
-    selectedModels: [],
-    sentHourlyMMs: '',
-    unsentPreviousMM: '',
-    joinedHandoverChannel: '',
-    notesForAhmed: ''
-  });
+    const ShiftManagementBot = () => {
+      const [currentView, setCurrentView] = useState('submit');
+      const [shifts, setShifts] = useState([]);
+      const [webhookUrl, setWebhookUrl] = useState('');
+      const [formData, setFormData] = useState({
+        chatterName: '',
+        shiftDate: '',
+        hoursWorked: '',
+        selectedModels: [],
+        sentHourlyMMs: '',
+        unsentPreviousMM: '',
+        joinedHandoverChannel: '',
+        notesForAhmed: ''
+      });
 
-  const models = ['Shan', 'Stacy', 'PurelySin VIP', 'Ayesha VIP', 'Alice'];
+      const models = ['Shan', 'Stacy', 'PurelySin VIP', 'Ayesha VIP', 'Alice'];
 
-  // Load data from memory on component mount
-  useEffect(() => {
-    const savedShifts = window.shiftData || [];
-    const savedWebhook = window.webhookUrl || '';
-    setShifts(savedShifts);
-    setWebhookUrl(savedWebhook);
-  }, []);
+      useEffect(() => {
+        const savedShifts = window.shiftData || [];
+        const savedWebhook = window.webhookUrl || '';
+        setShifts(savedShifts);
+        setWebhookUrl(savedWebhook);
+      }, []);
 
-  // Save data to memory whenever shifts change
-  useEffect(() => {
-    window.shiftData = shifts;
-  }, [shifts]);
+      useEffect(() => {
+        window.shiftData = shifts;
+      }, [shifts]);
 
-  // Save webhook URL to memory
-  useEffect(() => {
-    window.webhookUrl = webhookUrl;
-  }, [webhookUrl]);
+      useEffect(() => {
+        window.webhookUrl = webhookUrl;
+      }, [webhookUrl]);
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleModelChange = (modelName, field, value) => {
-    setFormData(prev => {
-      const updatedModels = [...prev.selectedModels];
-      const existingIndex = updatedModels.findIndex(m => m.name === modelName);
-      
-      if (existingIndex >= 0) {
-        if (field === 'selected' && !value) {
-          // Remove model if unselected
-          updatedModels.splice(existingIndex, 1);
-        } else {
-          // Update existing model
-          updatedModels[existingIndex] = {
-            ...updatedModels[existingIndex],
-            [field]: value
-          };
-        }
-      } else if (field === 'selected' && value) {
-        // Add new model
-        updatedModels.push({
-          name: modelName,
-          selected: true,
-          netSales: ''
-        });
-      }
-      
-      return {
-        ...prev,
-        selectedModels: updatedModels
+      const handleInputChange = (field, value) => {
+        setFormData(prev => ({
+          ...prev,
+          [field]: value
+        }));
       };
-    });
-  };
 
-  const postToChannel = async (shiftData) => {
-    if (!webhookUrl) return;
+      const handleModelChange = (modelName, field, value) => {
+        setFormData(prev => {
+          const updatedModels = [...prev.selectedModels];
+          const existingIndex = updatedModels.findIndex(m => m.name === modelName);
+          
+          if (existingIndex >= 0) {
+            if (field === 'selected' && !value) {
+              updatedModels.splice(existingIndex, 1);
+            } else {
+              updatedModels[existingIndex] = {
+                ...updatedModels[existingIndex],
+                [field]: value
+              };
+            }
+          } else if (field === 'selected' && value) {
+            updatedModels.push({
+              name: modelName,
+              selected: true,
+              netSales: ''
+            });
+          }
+          
+          return {
+            ...prev,
+            selectedModels: updatedModels
+          };
+        });
+      };
 
-    const modelsText = shiftData.selectedModels
-      .map(model => `${model.name}: ${model.netSales.toFixed(2)}`)
-      .join(', ');
+      const postToChannel = async (shiftData) => {
+        if (!webhookUrl) return;
 
-    const message = {
-      content: `🔄 **SHIFT REPORT**
+        const modelsText = shiftData.selectedModels
+          .map(model => `${model.name}: $${model.netSales.toFixed(2)}`)
+          .join(', ');
+
+        const message = {
+          content: `🔄 **SHIFT REPORT**
 👤 **Chatter:** ${shiftData.chatterName}
 📅 **Date:** ${new Date(shiftData.shiftDate).toLocaleDateString()}
 ⏰ **Hours:** ${shiftData.hoursWorked}h
-💰 **Net Sales:** ${shiftData.totalNetSales.toFixed(2)}
+💰 **Net Sales:** $${shiftData.totalNetSales.toFixed(2)}
 📊 **Models:** ${modelsText}
 
 **Protocol Check:**
@@ -96,566 +106,556 @@ ${shiftData.unsentPreviousMM === 'Yes' ? '✅' : '❌'} Unsent Previous MM
 ${shiftData.joinedHandoverChannel === 'Yes' ? '✅' : '❌'} Handover Channel
 
 ${shiftData.notesForAhmed ? `📝 **Notes:** ${shiftData.notesForAhmed}` : ''}`
-    };
-
-    try {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message)
-      });
-    } catch (error) {
-      console.error('Failed to post to channel:', error);
-    }
-  };
-
-  const handleSubmitShift = async () => {
-    if (!formData.chatterName || !formData.shiftDate || !formData.hoursWorked || formData.selectedModels.length === 0) {
-      alert('Please fill in all required fields (Name, Date, Hours, and at least one Model with Net Sales)');
-      return;
-    }
-
-    // Check if all selected models have net sales filled
-    const incompleteModels = formData.selectedModels.filter(model => !model.netSales || model.netSales === '');
-    if (incompleteModels.length > 0) {
-      alert('Please enter net sales for all selected models');
-      return;
-    }
-
-    const totalNetSales = formData.selectedModels.reduce((sum, model) => sum + parseFloat(model.netSales || 0), 0);
-
-    const newShift = {
-      id: Date.now(),
-      chatterName: formData.chatterName,
-      shiftDate: formData.shiftDate,
-      hoursWorked: parseFloat(formData.hoursWorked),
-      selectedModels: formData.selectedModels.map(model => ({
-        ...model,
-        netSales: parseFloat(model.netSales)
-      })),
-      totalNetSales: totalNetSales,
-      sentHourlyMMs: formData.sentHourlyMMs,
-      unsentPreviousMM: formData.unsentPreviousMM,
-      joinedHandoverChannel: formData.joinedHandoverChannel,
-      notesForAhmed: formData.notesForAhmed,
-      submittedAt: new Date().toISOString()
-    };
-
-    setShifts(prev => [...prev, newShift]);
-    
-    // Post to channel if webhook is configured
-    if (webhookUrl) {
-      await postToChannel(newShift);
-    }
-    
-    // Reset form
-    setFormData({
-      chatterName: '',
-      shiftDate: '',
-      hoursWorked: '',
-      selectedModels: [],
-      sentHourlyMMs: '',
-      unsentPreviousMM: '',
-      joinedHandoverChannel: '',
-      notesForAhmed: ''
-    });
-
-    alert('Shift report submitted successfully!');
-  };
-
-  const getWeeklyData = () => {
-    const weeklyStats = {};
-    
-    shifts.forEach(shift => {
-      const name = shift.chatterName;
-      if (!weeklyStats[name]) {
-        weeklyStats[name] = {
-          totalHours: 0,
-          totalNetSales: 0,
-          shiftsCount: 0,
-          shifts: [],
-          modelStats: {}
         };
-      }
-      
-      weeklyStats[name].totalHours += shift.hoursWorked;
-      weeklyStats[name].totalNetSales += shift.totalNetSales;
-      weeklyStats[name].shiftsCount += 1;
-      weeklyStats[name].shifts.push(shift);
 
-      // Track model-specific stats
-      shift.selectedModels.forEach(model => {
-        if (!weeklyStats[name].modelStats[model.name]) {
-          weeklyStats[name].modelStats[model.name] = {
-            totalSales: 0,
-            shiftCount: 0
-          };
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message)
+          });
+        } catch (error) {
+          console.error('Failed to post to channel:', error);
         }
-        weeklyStats[name].modelStats[model.name].totalSales += model.netSales;
-        weeklyStats[name].modelStats[model.name].shiftCount += 1;
-      });
-    });
+      };
 
-    return weeklyStats;
-  };
+      const handleSubmitShift = async () => {
+        if (!formData.chatterName || !formData.shiftDate || !formData.hoursWorked || formData.selectedModels.length === 0) {
+          alert('Please fill in all required fields (Name, Date, Hours, and at least one Model with Net Sales)');
+          return;
+        }
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+        const incompleteModels = formData.selectedModels.filter(model => !model.netSales || model.netSales === '');
+        if (incompleteModels.length > 0) {
+          alert('Please enter net sales for all selected models');
+          return;
+        }
 
-  const weeklyData = getWeeklyData();
+        const totalNetSales = formData.selectedModels.reduce((sum, model) => sum + parseFloat(model.netSales || 0), 0);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-500 p-2 rounded-lg">
-                <Clock className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">Shift Management Bot</h1>
-                <p className="text-gray-600">Track shifts, sales, and generate payroll reports</p>
-              </div>
-            </div>
-            
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setCurrentView('submit')}
-                className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                  currentView === 'submit' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <Plus className="h-4 w-4" />
-                <span>Submit Shift</span>
-              </button>
-              <button
-                onClick={() => setCurrentView('admin')}
-                className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                  currentView === 'admin' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>Admin View</span>
-              </button>
-              <button
-                onClick={() => setCurrentView('settings')}
-                className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                  currentView === 'settings' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        const newShift = {
+          id: Date.now(),
+          chatterName: formData.chatterName,
+          shiftDate: formData.shiftDate,
+          hoursWorked: parseFloat(formData.hoursWorked),
+          selectedModels: formData.selectedModels.map(model => ({
+            ...model,
+            netSales: parseFloat(model.netSales)
+          })),
+          totalNetSales: totalNetSales,
+          sentHourlyMMs: formData.sentHourlyMMs,
+          unsentPreviousMM: formData.unsentPreviousMM,
+          joinedHandoverChannel: formData.joinedHandoverChannel,
+          notesForAhmed: formData.notesForAhmed,
+          submittedAt: new Date().toISOString()
+        };
 
-        {/* Submit Shift View */}
-        {currentView === 'submit' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <FileText className="h-5 w-5 text-blue-500" />
-              <h2 className="text-xl font-semibold text-gray-800">Submit Shift Report</h2>
-            </div>
+        setShifts(prev => [...prev, newShift]);
+        
+        if (webhookUrl) {
+          await postToChannel(newShift);
+        }
+        
+        setFormData({
+          chatterName: '',
+          shiftDate: '',
+          hoursWorked: '',
+          selectedModels: [],
+          sentHourlyMMs: '',
+          unsentPreviousMM: '',
+          joinedHandoverChannel: '',
+          notesForAhmed: ''
+        });
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Chatter Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.chatterName}
-                    onChange={(e) => handleInputChange('chatterName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your name"
-                  />
-                </div>
+        alert('Shift report submitted successfully!');
+      };
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Shift Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.shiftDate}
-                    onChange={(e) => handleInputChange('shiftDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+      const getWeeklyData = () => {
+        const weeklyStats = {};
+        
+        shifts.forEach(shift => {
+          const name = shift.chatterName;
+          if (!weeklyStats[name]) {
+            weeklyStats[name] = {
+              totalHours: 0,
+              totalNetSales: 0,
+              shiftsCount: 0,
+              shifts: [],
+              modelStats: {}
+            };
+          }
+          
+          weeklyStats[name].totalHours += shift.hoursWorked;
+          weeklyStats[name].totalNetSales += shift.totalNetSales;
+          weeklyStats[name].shiftsCount += 1;
+          weeklyStats[name].shifts.push(shift);
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hours Worked *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.hoursWorked}
-                    onChange={(e) => handleInputChange('hoursWorked', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="12"
-                  />
-                </div>
-              </div>
+          shift.selectedModels.forEach(model => {
+            if (!weeklyStats[name].modelStats[model.name]) {
+              weeklyStats[name].modelStats[model.name] = {
+                totalSales: 0,
+                shiftCount: 0
+              };
+            }
+            weeklyStats[name].modelStats[model.name].totalSales += model.netSales;
+            weeklyStats[name].modelStats[model.name].shiftCount += 1;
+          });
+        });
 
-              {/* Models and Net Sales */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Models Worked & Net Sales *
-                  </label>
-                  <div className="space-y-3">
-                    {models.map((model) => {
-                      const selectedModel = formData.selectedModels.find(m => m.name === model);
-                      const isSelected = !!selectedModel;
-                      
-                      return (
-                        <div key={model} className="border border-gray-200 rounded-lg p-3">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => handleModelChange(model, 'selected', e.target.checked)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <label className="font-medium text-gray-700">{model}</label>
-                          </div>
-                          {isSelected && (
-                            <div className="ml-7">
-                              <label className="block text-sm text-gray-600 mb-1">Net Sales ($)</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={selectedModel?.netSales || ''}
-                                onChange={(e) => handleModelChange(model, 'netSales', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="0.00"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+        return weeklyStats;
+      };
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Did you send hourly MMs?
-                  </label>
-                  <select
-                    value={formData.sentHourlyMMs}
-                    onChange={(e) => handleInputChange('sentHourlyMMs', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
+      const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      };
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Did you unsend the previous MM?
-                  </label>
-                  <select
-                    value={formData.unsentPreviousMM}
-                    onChange={(e) => handleInputChange('unsentPreviousMM', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
+      const weeklyData = getWeeklyData();
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Did you join handover channel to handover the next chatter?
-                  </label>
-                  <select
-                    value={formData.joinedHandoverChannel}
-                    onChange={(e) => handleInputChange('joinedHandoverChannel', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes for Ahmed or the next chatter
-                  </label>
-                  <textarea
-                    value={formData.notesForAhmed}
-                    onChange={(e) => handleInputChange('notesForAhmed', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    rows="3"
-                    placeholder="Any notes for Ahmed or the next chatter about the shift, ongoing conversations, etc..."
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={handleSubmitShift}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2 font-medium"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Submit Shift Report</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Admin View */}
-        {currentView === 'admin' && (
-          <div className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-green-500 p-2 rounded-lg">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Chatters</p>
-                    <p className="text-2xl font-bold text-gray-800">{Object.keys(weeklyData).length}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-lg p-6">
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="bg-blue-500 p-2 rounded-lg">
                     <Clock className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Total Hours</p>
-                    <p className="text-2xl font-bold text-gray-800">
-                      {Object.values(weeklyData).reduce((sum, data) => sum + data.totalHours, 0)}
-                    </p>
+                    <h1 className="text-2xl font-bold text-gray-800">Shift Management Bot</h1>
+                    <p className="text-gray-600">Track shifts, sales, and generate payroll reports</p>
                   </div>
                 </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-yellow-500 p-2 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Sales</p>
-                    <p className="text-2xl font-bold text-gray-800">
-                      {Object.values(weeklyData).reduce((sum, data) => sum + data.totalSales, 0)}
-                    </p>
-                  </div>
+                
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setCurrentView('submit')}
+                    className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                      currentView === 'submit' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Submit Shift</span>
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('admin')}
+                    className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                      currentView === 'admin' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Admin View</span>
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('settings')}
+                    className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                      currentView === 'settings' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Weekly Summary */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Weekly Summary</h2>
-              
-              {Object.keys(weeklyData).length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No shift reports submitted yet.</p>
-              ) : (
-                <div className="space-y-4">
-                  {Object.entries(weeklyData).map(([name, data]) => (
-                    <div key={name} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-semibold text-lg text-gray-800">{name}</h3>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">{data.shiftsCount} shifts completed</p>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <p className="text-sm text-blue-600 font-medium">Total Hours</p>
-                          <p className="text-xl font-bold text-blue-800">{data.totalHours}</p>
-                        </div>
-                        <div className="bg-green-50 p-3 rounded-lg">
-                          <p className="text-sm text-green-600 font-medium">Total Net Sales</p>
-                          <p className="text-xl font-bold text-green-800">${data.totalNetSales.toFixed(2)}</p>
-                        </div>
-                        <div className="bg-yellow-50 p-3 rounded-lg">
-                          <p className="text-sm text-yellow-600 font-medium">Avg Hours/Shift</p>
-                          <p className="text-xl font-bold text-yellow-800">
-                            {(data.totalHours / data.shiftsCount).toFixed(1)}
-                          </p>
-                        </div>
-                        <div className="bg-purple-50 p-3 rounded-lg">
-                          <p className="text-sm text-purple-600 font-medium">Avg Sales/Shift</p>
-                          <p className="text-xl font-bold text-purple-800">
-                            ${(data.totalNetSales / data.shiftsCount).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
+            {currentView === 'submit' && (
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="flex items-center space-x-2 mb-6">
+                  <FileText className="h-5 w-5 text-blue-500" />
+                  <h2 className="text-xl font-semibold text-gray-800">Submit Shift Report</h2>
+                </div>
 
-                      {/* Model Breakdown */}
-                      {Object.keys(data.modelStats).length > 0 && (
-                        <div className="mt-4">
-                          <h4 className="font-medium text-gray-700 mb-2">Model Performance</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {Object.entries(data.modelStats).map(([modelName, stats]) => (
-                              <div key={modelName} className="bg-indigo-50 p-2 rounded">
-                                <p className="font-medium text-indigo-800 text-sm">{modelName}</p>
-                                <p className="text-xs text-indigo-600">
-                                  ${stats.totalSales.toFixed(2)} • {stats.shiftCount} shifts
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Chatter Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.chatterName}
+                        onChange={(e) => handleInputChange('chatterName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter your name"
+                      />
+                    </div>
 
-                      {/* Recent Shifts */}
-                      <div className="mt-4">
-                        <h4 className="font-medium text-gray-700 mb-2">Recent Shifts</h4>
-                        <div className="space-y-2">
-                          {data.shifts.slice(-3).map((shift, index) => (
-                            <div key={shift.id} className="bg-gray-50 p-3 rounded flex justify-between items-start">
-                              <div className="flex-1">
-                                <p className="font-medium">{formatDate(shift.shiftDate)}</p>
-                                <p className="text-sm text-gray-600">
-                                  {shift.hoursWorked}h • ${shift.totalNetSales.toFixed(2)} net sales
-                                </p>
-                                {shift.selectedModels.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {shift.selectedModels.map((model, idx) => (
-                                      <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
-                                        {model.name}: ${model.netSales.toFixed(2)}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  <span className={`px-2 py-0.5 rounded text-xs ${shift.sentHourlyMMs === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    Hourly MMs: {shift.sentHourlyMMs || 'Not specified'}
-                                  </span>
-                                  <span className={`px-2 py-0.5 rounded text-xs ${shift.unsentPreviousMM === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    Unsent MM: {shift.unsentPreviousMM || 'Not specified'}
-                                  </span>
-                                  <span className={`px-2 py-0.5 rounded text-xs ${shift.joinedHandoverChannel === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    Handover: {shift.joinedHandoverChannel || 'Not specified'}
-                                  </span>
-                                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Shift Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.shiftDate}
+                        onChange={(e) => handleInputChange('shiftDate', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hours Worked *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={formData.hoursWorked}
+                        onChange={(e) => handleInputChange('hoursWorked', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="12"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Models Worked & Net Sales *
+                      </label>
+                      <div className="space-y-3">
+                        {models.map((model) => {
+                          const selectedModel = formData.selectedModels.find(m => m.name === model);
+                          const isSelected = !!selectedModel;
+                          
+                          return (
+                            <div key={model} className="border border-gray-200 rounded-lg p-3">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => handleModelChange(model, 'selected', e.target.checked)}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <label className="font-medium text-gray-700">{model}</label>
                               </div>
-                              {shift.notesForAhmed && (
-                                <div className="ml-2">
-                                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                                    Has Notes
-                                  </span>
+                              {isSelected && (
+                                <div className="ml-7">
+                                  <label className="block text-sm text-gray-600 mb-1">Net Sales ($)</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={selectedModel?.netSales || ''}
+                                    onChange={(e) => handleModelChange(model, 'netSales', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="0.00"
+                                  />
                                 </div>
                               )}
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  ))}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Did you send hourly MMs?
+                      </label>
+                      <select
+                        value={formData.sentHourlyMMs}
+                        onChange={(e) => handleInputChange('sentHourlyMMs', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select option</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Did you unsend the previous MM?
+                      </label>
+                      <select
+                        value={formData.unsentPreviousMM}
+                        onChange={(e) => handleInputChange('unsentPreviousMM', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select option</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Did you join handover channel to handover the next chatter?
+                      </label>
+                      <select
+                        value={formData.joinedHandoverChannel}
+                        onChange={(e) => handleInputChange('joinedHandoverChannel', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select option</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Notes for Ahmed or the next chatter
+                      </label>
+                      <textarea
+                        value={formData.notesForAhmed}
+                        onChange={(e) => handleInputChange('notesForAhmed', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows="3"
+                        placeholder="Any notes for Ahmed or the next chatter about the shift, ongoing conversations, etc..."
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* Settings View */}
-        {currentView === 'settings' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <Settings className="h-5 w-5 text-blue-500" />
-              <h2 className="text-xl font-semibold text-gray-800">Channel Integration Settings</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Discord/Slack Webhook URL
-                </label>
-                <input
-                  type="url"
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/services/..."
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Paste your webhook URL here to automatically post shift reports to your channel
-                </p>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={handleSubmitShift}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2 font-medium"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Submit Shift Report</span>
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-medium text-blue-800 mb-2">How to get your webhook URL:</h3>
-                <div className="text-sm text-blue-700 space-y-2">
-                  <p><strong>Discord:</strong></p>
-                  <ol className="list-decimal list-inside ml-4 space-y-1">
-                    <li>Go to your channel settings → Integrations → Webhooks</li>
-                    <li>Click "New Webhook" or "Create Webhook"</li>
-                    <li>Name it "Shift Reports" and copy the webhook URL</li>
-                  </ol>
+            {currentView === 'admin' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white rounded-lg shadow-lg p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-green-500 p-2 rounded-lg">
+                        <Users className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Total Chatters</p>
+                        <p className="text-2xl font-bold text-gray-800">{Object.keys(weeklyData).length}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-lg p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-blue-500 p-2 rounded-lg">
+                        <Clock className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Total Hours</p>
+                        <p className="text-2xl font-bold text-gray-800">
+                          {Object.values(weeklyData).reduce((sum, data) => sum + data.totalHours, 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-lg p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-yellow-500 p-2 rounded-lg">
+                        <DollarSign className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Total Net Sales</p>
+                        <p className="text-2xl font-bold text-gray-800">
+                          ${Object.values(weeklyData).reduce((sum, data) => sum + data.totalNetSales, 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-6">Weekly Summary</h2>
                   
-                  <p className="mt-3"><strong>Slack:</strong></p>
-                  <ol className="list-decimal list-inside ml-4 space-y-1">
-                    <li>Go to your Slack App settings → Incoming Webhooks</li>
-                    <li>Click "Add New Webhook to Workspace"</li>
-                    <li>Choose your channel and copy the webhook URL</li>
-                  </ol>
+                  {Object.keys(weeklyData).length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No shift reports submitted yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(weeklyData).map(([name, data]) => (
+                        <div key={name} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <h3 className="font-semibold text-lg text-gray-800">{name}</h3>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">{data.shiftsCount} shifts completed</p>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div className="bg-blue-50 p-3 rounded-lg">
+                              <p className="text-sm text-blue-600 font-medium">Total Hours</p>
+                              <p className="text-xl font-bold text-blue-800">{data.totalHours}</p>
+                            </div>
+                            <div className="bg-green-50 p-3 rounded-lg">
+                              <p className="text-sm text-green-600 font-medium">Total Net Sales</p>
+                              <p className="text-xl font-bold text-green-800">${data.totalNetSales.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-yellow-50 p-3 rounded-lg">
+                              <p className="text-sm text-yellow-600 font-medium">Avg Hours/Shift</p>
+                              <p className="text-xl font-bold text-yellow-800">
+                                {(data.totalHours / data.shiftsCount).toFixed(1)}
+                              </p>
+                            </div>
+                            <div className="bg-purple-50 p-3 rounded-lg">
+                              <p className="text-sm text-purple-600 font-medium">Avg Sales/Shift</p>
+                              <p className="text-xl font-bold text-purple-800">
+                                ${(data.totalNetSales / data.shiftsCount).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {Object.keys(data.modelStats).length > 0 && (
+                            <div className="mt-4">
+                              <h4 className="font-medium text-gray-700 mb-2">Model Performance</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {Object.entries(data.modelStats).map(([modelName, stats]) => (
+                                  <div key={modelName} className="bg-indigo-50 p-2 rounded">
+                                    <p className="font-medium text-indigo-800 text-sm">{modelName}</p>
+                                    <p className="text-xs text-indigo-600">
+                                      ${stats.totalSales.toFixed(2)} • {stats.shiftCount} shifts
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="mt-4">
+                            <h4 className="font-medium text-gray-700 mb-2">Recent Shifts</h4>
+                            <div className="space-y-2">
+                              {data.shifts.slice(-3).map((shift, index) => (
+                                <div key={shift.id} className="bg-gray-50 p-3 rounded flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{formatDate(shift.shiftDate)}</p>
+                                    <p className="text-sm text-gray-600">
+                                      {shift.hoursWorked}h • ${shift.totalNetSales.toFixed(2)} net sales
+                                    </p>
+                                    {shift.selectedModels.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {shift.selectedModels.map((model, idx) => (
+                                          <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
+                                            {model.name}: ${model.netSales.toFixed(2)}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      <span className={`px-2 py-0.5 rounded text-xs ${shift.sentHourlyMMs === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        Hourly MMs: {shift.sentHourlyMMs || 'Not specified'}
+                                      </span>
+                                      <span className={`px-2 py-0.5 rounded text-xs ${shift.unsentPreviousMM === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        Unsent MM: {shift.unsentPreviousMM || 'Not specified'}
+                                      </span>
+                                      <span className={`px-2 py-0.5 rounded text-xs ${shift.joinedHandoverChannel === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        Handover: {shift.joinedHandoverChannel || 'Not specified'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {shift.notesForAhmed && (
+                                    <div className="ml-2">
+                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                                        Has Notes
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
+            )}
 
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-medium text-green-800 mb-2">Message Preview:</h3>
-                <div className="text-sm text-green-700 bg-white p-3 rounded border font-mono">
-                  🔄 <strong>SHIFT REPORT</strong><br/>
-                  👤 <strong>Chatter:</strong> John Doe<br/>
-                  📅 <strong>Date:</strong> 12/15/2024<br/>
-                  ⏰ <strong>Hours:</strong> 12h<br/>
-                  💰 <strong>Net Sales:</strong> $245.50<br/>
-                  📊 <strong>Models:</strong> Shan: $100.00, Stacy: $145.50<br/><br/>
-                  <strong>Protocol Check:</strong><br/>
-                  ✅ Hourly MMs<br/>
-                  ✅ Unsent Previous MM<br/>
-                  ✅ Handover Channel<br/><br/>
-                  📝 <strong>Notes:</strong> Client was asking about premium content
+            {currentView === 'settings' && (
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="flex items-center space-x-2 mb-6">
+                  <Settings className="h-5 w-5 text-blue-500" />
+                  <h2 className="text-xl font-semibold text-gray-800">Channel Integration Settings</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Discord/Slack Webhook URL
+                    </label>
+                    <input
+                      type="url"
+                      value={webhookUrl}
+                      onChange={(e) => setWebhookUrl(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/services/..."
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Paste your webhook URL here to automatically post shift reports to your channel
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-blue-800 mb-2">How to get your webhook URL:</h3>
+                    <div className="text-sm text-blue-700 space-y-2">
+                      <p><strong>Discord:</strong></p>
+                      <ol className="list-decimal list-inside ml-4 space-y-1">
+                        <li>Go to your channel settings → Integrations → Webhooks</li>
+                        <li>Click "New Webhook" or "Create Webhook"</li>
+                        <li>Name it "Shift Reports" and copy the webhook URL</li>
+                      </ol>
+                      
+                      <p className="mt-3"><strong>Slack:</strong></p>
+                      <ol className="list-decimal list-inside ml-4 space-y-1">
+                        <li>Go to your Slack App settings → Incoming Webhooks</li>
+                        <li>Click "Add New Webhook to Workspace"</li>
+                        <li>Choose your channel and copy the webhook URL</li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-green-800 mb-2">Message Preview:</h3>
+                    <div className="text-sm text-green-700 bg-white p-3 rounded border font-mono">
+                      🔄 <strong>SHIFT REPORT</strong><br/>
+                      👤 <strong>Chatter:</strong> John Doe<br/>
+                      📅 <strong>Date:</strong> 12/15/2024<br/>
+                      ⏰ <strong>Hours:</strong> 12h<br/>
+                      💰 <strong>Net Sales:</strong> $245.50<br/>
+                      📊 <strong>Models:</strong> Shan: $100.00, Stacy: $145.50<br/><br/>
+                      <strong>Protocol Check:</strong><br/>
+                      ✅ Hourly MMs<br/>
+                      ✅ Unsent Previous MM<br/>
+                      ✅ Handover Channel<br/><br/>
+                      📝 <strong>Notes:</strong> Client was asking about premium content
+                    </div>
+                  </div>
+
+                  {webhookUrl && (
+                    <div className="bg-green-100 border border-green-300 rounded-lg p-4">
+                      <p className="text-green-800 font-medium">✅ Webhook configured! Shift reports will be automatically posted to your channel.</p>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {webhookUrl && (
-                <div className="bg-green-100 border border-green-300 rounded-lg p-4">
-                  <p className="text-green-800 font-medium">✅ Webhook configured! Shift reports will be automatically posted to your channel.</p>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
-  );
-};
+        </div>
+      );
+    };
 
-export default ShiftManagementBot;
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(ShiftManagementBot));
+  </script>
+</body>
+</html>
